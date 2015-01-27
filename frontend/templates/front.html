@@ -12,34 +12,10 @@
 
 {% block body %}
   <div class="starter-template"><h1>powerhaus</h1></div>
-<p>
-  <b>Size:</b> 300x30 &nbsp;&nbsp;<b>Interpolation:</b> basis  &nbsp;&nbsp;<b>Animation:</b> true &nbsp;&nbsp;<b>Transition:</b> 1000ms &nbsp;&nbsp;<b>Update Frequency:</b> 1000ms
-  <div id="graph1" class="aGraph" style="width:500px; height:40px;"></div>
-</p>
+<p>Sensor 1 (<strong>32 W</strong>)<br/><div id="graph1" class="aGraph" style="width:500px; height:40px;"></div></p>
+<p>Sensor 2 (<strong>1622 W</strong>)<br/><div id="graph2" class="aGraph" style="width:500px; height:40px;"></div></p>
+<p>Sensor 3 (<strong>930 W</strong>)<br/><div id="graph3" class="aGraph" style="width:500px; height:40px;"></div></p>
 
-<!--
-<p>
-  <b>Size:</b> 150x15 &nbsp;&nbsp;<b>Interpolation:</b> basis  &nbsp;&nbsp;<b>Animation:</b> true &nbsp;&nbsp;<b>Transition:</b> 1000ms &nbsp;&nbsp;<b>Update Frequency:</b> 1000ms
-  <div id="graph2" class="aGraph" style="width:150px; height:15px;"></div>
-</p>
-<p>
-  <b>Size:</b> 150x15 &nbsp;&nbsp;<b>Interpolation:</b> linear  &nbsp;&nbsp;<b>Animation:</b> true &nbsp;&nbsp;<b>Transition:</b> 1000ms &nbsp;&nbsp;<b>Update Frequency:</b> 1000ms
-  <div id="graph3" class="aGraph" style="width:150px; height:15px;"></div>
-</p>
-<p>
-  <b>Size:</b> 150x15 &nbsp;&nbsp;<b>Interpolation:</b> linear  &nbsp;&nbsp;<b>Animation:</b> false &nbsp;&nbsp;<b>Transition:</b> 1000ms &nbsp;&nbsp;<b>Update Frequency:</b> 1000ms
-  <div id="graph4" class="aGraph" style="width:150px; height:15px;"></div>
-</p>
-<p>
-  <b>Size:</b> 300x30 &nbsp;&nbsp;<b>Interpolation:</b> basis  &nbsp;&nbsp;<b>Animation:</b> true &nbsp;&nbsp;<b>Transition:</b> 750ms &nbsp;&nbsp;<b>Update Frequency:</b> 1500ms
-  <div id="graph5" class="aGraph" style="width:300px; height:30px;"></div>
-</p>
-<p>
-  <b>Size:</b> 300x30 &nbsp;&nbsp;<b>Interpolation:</b> basis  &nbsp;&nbsp;<b>Animation:</b> false &nbsp;&nbsp;<b>Transition:</b> 750ms &nbsp;&nbsp;<b>Update Frequency:</b> 1500ms
-  <div id="graph6" class="aGraph" style="width:300px; height:30px;"></div>
-</p>
--->
-  
 <script>
   var data = [];
   function displayGraphExample(id, width, height, interpolation, animate, updateDelay, transitionDelay) {
@@ -98,45 +74,24 @@
       }
       
       setInterval(function() {
-         frosk = {};
-         $.getJSON( "/readings.json", function(data) {
-          frosk = data.sensor1;
+         $.getJSON( "/readings.json", function(d) {
+          data.shift();
+          data.push(d.sensor1[0]);
          });
-       console.log('loff');
-       console.log('len: ' + frosk.length);
-      $.each(frosk, function(key, val ) {
-         console.log('key: ' + key + ' value: ' + value); });
-       console.log('mjoff');
-/*
-    $( "<ul/>", {
-         console.log('new value: ' + frosk[0]['sensor1'][10] + ' --');
-//         var v = newdata.shift(); // remove the first element of the array
- //        var v = 10.0;
-  //       data.push(v); // add a new element to the array (we're just taking the number we just shifted off the front and appending to the end)
-         // #if(animate) {
-*/
-         redrawWithAnimation();
-         //    redrawWithoutAnimation();
+       console.log('len: ' + data.length);
+         // redrawWithAnimation();
+         redrawWithoutAnimation();
       }, updateDelay);
     }
     
     displayGraphExample("#graph1", 500, 40, "basis", true, 1000, 1000);
+    displayGraphExample("#graph2", 500, 40, "basis", true, 1000, 1000);
+    displayGraphExample("#graph3", 500, 40, "basis", true, 1000, 1000);
 /*    displayGraphExample("#graph2", 150, 15, "basis", true, 1000, 1000);
     displayGraphExample("#graph3", 150, 15, "linear", true, 1000, 1000);
     displayGraphExample("#graph4", 150, 15, "linear", false, 1000, 1000);   
     displayGraphExample("#graph5", 300, 30, "basis", true, 1500, 750);  
     displayGraphExample("#graph6", 300, 30, "basis", false, 1500, 750);   
     */
-
-//    $.each( data, function( key, val ) {
- //     items.push( "<li id='" + key + "'>" + val + "</li>" );
-/*
-    $( "<ul/>", {
-      "class": "my-new-list",
-      html: items.join( "" )
-    }).appendTo( "body" );
-  });
-*/
-
   </script>
 {%endblock%}
