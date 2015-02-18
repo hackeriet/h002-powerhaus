@@ -67,11 +67,12 @@ class ThreadedHTTPServer(SocketServer.ThreadingMixIn,
 
 if __name__ == '__main__':
     us = UDPServer(("0.0.0.0", 1235), SampleHandler)
-#    us.serve_forever()
+    t = threading.Thread(target=us.serve_forever)
+    t.setDaemon = True
+    t.start()
 
     BaseHTTPServer.allow_reuse_address = True
     SocketServer.TCPServer.address_family = socket.AF_INET6
     SocketServer.TCPServer.allow_reuse_address = True
     hp = ThreadedHTTPServer(("", 8080), HTTPRequestHandler)
     hp.serve_forever()
-
