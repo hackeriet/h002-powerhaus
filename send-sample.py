@@ -20,4 +20,4 @@ if __name__ == "__main__":
         s.sendto(" ".join(msg), dest)
         sys.stdout.write(".")
         sys.stdout.flush()
-        time.sleep(0.5)
+        time.sleep(2.0)
