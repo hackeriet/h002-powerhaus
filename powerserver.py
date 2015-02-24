@@ -53,6 +53,9 @@ class SampleHandler(DatagramRequestHandler):
                 readings[k].pop(0)
 
 class HTTPRequestHandler(SimpleHTTPRequestHandler):
+    def log_message(self, *args, **kwargs):
+        pass
+
     def do_GET(self):
         if (self.path == "/"):
             msg = "See /readings.json, please.\n"
