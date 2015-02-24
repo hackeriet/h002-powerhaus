@@ -1,5 +1,13 @@
-{% extends "base.html" %}
-{% block head %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>powerhaus</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap-theme.min.css">
+  <script src="http://mbostock.github.com/d3/d3.v2.js"></script>
   <style>
       /* tell the SVG path to be a thin blue line without any area fill */
       path {
@@ -8,9 +16,9 @@
         fill: none;
     }
     </style>
-{% endblock %}
-
-{% block body %}
+</head>
+<body>
+  <div class="container">
   <div class="starter-template"><h1>powerhaus</h1></div>
 <p>Sensor 1 (<strong>32 W</strong>)<br/><div id="graph1" class="aGraph" style="width:500px; height:40px;"></div></p>
 <p>Sensor 2 (<strong>1622 W</strong>)<br/><div id="graph2" class="aGraph" style="width:500px; height:40px;"></div></p>
@@ -94,4 +102,13 @@
     displayGraphExample("#graph6", 300, 30, "basis", false, 1500, 750);   
     */
   </script>
-{%endblock%}
+    <div class="footer">
+      <p>last updated {{now.strftime('%Y-%m-%d')}}.</p>
+    </div>
+  </div>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+  </body>
+</html>
+
+
