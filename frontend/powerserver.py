@@ -4,13 +4,15 @@ import datetime
 import json
 import random
 import socket
+import BaseHTTPServer
+import SocketServer
 
 from SocketServer import UDPServer, DatagramRequestHandler
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 from pprint import pprint
-import BaseHTTPServer
-import SocketServer
-#from SocketServer import ThreadedHTTPServer
+from sys import argv
+
+from jinja2 import Environment, PackageLoader
 
 # { "sensorid": [ 1.1, 1.2, 0.9, 1.1 ], }
 readings = {}
@@ -33,8 +35,11 @@ class SampleHandler(DatagramRequestHandler):
 class HTTPRequestHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if (self.path == "/"):
-            msg = "OK"
-            #return render_template('front.html', **res)
+            env = Environment(loader=PackageLoader('frontend/templates', ''))
+            template = env.get_template("front.html")
+            msg = template.render()
+            pprint(msg)
+
             self.send_response(200)
             self.send_header("Content-type", "text/plain")
             self.send_header("Content-Length", len(msg))
@@ -61,12 +66,15 @@ class ThreadedHTTPServer(SocketServer.ThreadingMixIn,
     """Handle requests in a separate thread."""
 
     def handle_error(self, request, client_address):
-        pass
-        if 0:
+        if 1:
             import traceback
             traceback.print_exc()
 
 if __name__ == '__main__':
+    if "-d" in argv:
+        import daemon
+        daemon.daemonize("/var/tmp/powerserver.pid")
+
     us = UDPServer(("0.0.0.0", 1235), SampleHandler)
     t = threading.Thread(target=us.serve_forever)
     t.setDaemon = True

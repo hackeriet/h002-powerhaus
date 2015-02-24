@@ -1,4 +1,3 @@
 #
-#elasticsearch
-#
-flask
+jinja2
+daemon
