@@ -54,7 +54,7 @@
         return y(d); 
       })
       .interpolate(interpolation)
-  
+ 
       // display the line by appending an svg:path element with the data line we created above
       graph.append("svg:path").attr("d", line(data));
       // or it can be done like this
@@ -82,13 +82,15 @@
       }
       
       setInterval(function() {
-         $.getJSON( "/readings.json", function(d) {
+         $.getJSON("http://blade:8088/readings.json", function(d) {
           data.shift();
-          data.push(d.sensor1[0]);
+          data.push(d["p0"][0]);
+          console.log(d["p0"][0]);
+          console.log(data);
          });
        console.log('len: ' + data.length);
          // redrawWithAnimation();
-         redrawWithoutAnimation();
+       redrawWithoutAnimation();
       }, updateDelay);
     }
     
@@ -102,9 +104,6 @@
     displayGraphExample("#graph6", 300, 30, "basis", false, 1500, 750);   
     */
   </script>
-    <div class="footer">
-      <p>last updated {{now.strftime('%Y-%m-%d')}}.</p>
-    </div>
   </div>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>

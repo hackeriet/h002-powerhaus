@@ -28,6 +28,7 @@ class SampleHandler(DatagramRequestHandler):
     def handle(self):
         global readings
         payload = self.rfile.read()
+        pprint(payload)
         #powerhaus.hackeriet.no ticks/minute: 4.5 12.1 3.4 0.0 11.2 23.32 CTpower: 1234 4321 12315 123 0 31213
         l = payload.split(" ")
         if len(l) != 16:
@@ -36,6 +37,7 @@ class SampleHandler(DatagramRequestHandler):
         tpow = l[10:16]
         for i, value in enumerate(ticks):
             name = "t%i" % i
+            value = float(value)
             try:
                 readings[name] += [value]
             except:
@@ -43,6 +45,7 @@ class SampleHandler(DatagramRequestHandler):
 
         for i, value in enumerate(tpow):
             name = "p%i" % i
+            value = float(value)
             try:
                 readings[name] += [value]
             except:
@@ -94,7 +97,7 @@ if __name__ == '__main__':
         import daemon
         daemon.daemonize("/var/tmp/powerserver.pid")
 
-    us = UDPServer(("", 1235), SampleHandler)
+    us = UDPServer(("", 54321), SampleHandler)
     t = threading.Thread(target=us.serve_forever)
     t.setDaemon = True
     t.start()
