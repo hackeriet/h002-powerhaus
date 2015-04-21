@@ -6,9 +6,10 @@ from pprint import pprint
 
 if __name__ == "__main__":
     s = socket(AF_INET, SOCK_DGRAM)
-    s.bind(('', 0))
+    s.bind(('', 12345))
     s.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
-    dest = ('255.255.255.255', 54321)
+#    dest = ('255.255.255.255', 54321)
+    dest = ('10.0.130.255', 54321)
     print "Sending samples to %s port %s." % dest
 
     #powerhaus.hackeriet.no ticks/minute: 4.5 12.1 3.4 0.0 11.2 23.32 CTpower: 1234 4321 12315 123 0 31213
