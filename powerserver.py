@@ -9,47 +9,70 @@ Used for graphing power usage.
 Author: Lasse Karstensen <lasse.karstensen@gmail.com>, February 2015.
 """
 import threading
-import datetime
 import json
 import random
 import socket
 import BaseHTTPServer
 import SocketServer
 
+from datetime import datetime
+
+import pcapy
+
 from SocketServer import UDPServer, DatagramRequestHandler
 from SimpleHTTPServer import SimpleHTTPRequestHandler
-from pprint import pprint
-from sys import argv
+from pprint import pprint, pformat
+from sys import argv, stdout
 
 # { "sensorid": [ 1.1, 1.2, 0.9, 1.1 ], }
 readings = {}
+
+def parse_sample(payload):
+    """
+    Parse a powerhaus data sample, like this:
+
+    >>> parse_sample("preamble powerhaus0.kakesmurf.zool pulses/min: 570 570 210 360 330 1110 CTpower: 162.17 4527.03 4579.05 4293.94 2320.26 1415.14")
+    [('b1', 570.0), ('b2', 570.0), ('b3', 210.0), ('b4', 360.0), ('b5', 330.0), ('b6', 1110.0), ('ct1', 162.17), ('ct2', 4527.03), ('ct3', 4579.05), ('ct4', 4293.94), ('ct5', 2320.26), ('ct6', 1415.14)]
+    """
+    l = payload.split(" ")
+    if len(l) != 16:
+        return
+    blinks = l[3:9]
+    ctpower = l[10:16]
+
+    r = []
+    for i, value in enumerate(blinks):
+        name = "b%i" % (i+1)
+        r += [(name, float(value))]
+
+    for i, value in enumerate(ctpower):
+        name = "ct%i" % (i+1)
+        r += [(name, float(value))]
+    return r
+
+def pkt_cb(pkthdr, data):
+    global readings
+    print data
+    # best check ever.
+    if "zool" not in data:
+        return
+    ts = datetime.fromtimestamp(pkthdr.getts()[0])
+    print "%s\t" % ts,
+    sample = parse_sample(data)
+    try:
+        #print " ".join(["%s=%.3f" % (x[0], x[1]) for x in sample])
+        print "\t".join(["%.2f" % (x[1]) for x in sample])
+    except AttributeError:
+        print "INVALID packet data: %s" % pformat(sample)
+    stdout.flush()
+#    pprint(sample)
+       
 
 class SampleHandler(DatagramRequestHandler):
     def handle(self):
         global readings
         payload = self.rfile.read()
         pprint(payload)
-        #powerhaus.hackeriet.no ticks/minute: 4.5 12.1 3.4 0.0 11.2 23.32 CTpower: 1234 4321 12315 123 0 31213
-        l = payload.split(" ")
-        if len(l) != 16:
-            return
-        ticks = l[3:9]
-        tpow = l[10:16]
-        for i, value in enumerate(ticks):
-            name = "t%i" % i
-            value = float(value)
-            try:
-                readings[name] += [value]
-            except:
-                readings[name] = [value]
-
-        for i, value in enumerate(tpow):
-            name = "p%i" % i
-            value = float(value)
-            try:
-                readings[name] += [value]
-            except:
-                readings[name] = [value]
 
         for k in readings.keys():
             if len(readings[k]) > 20:
@@ -97,10 +120,16 @@ if __name__ == '__main__':
         import daemon
         daemon.daemonize("/var/tmp/powerserver.pid")
 
-    us = UDPServer(("", 54321), SampleHandler)
-    t = threading.Thread(target=us.serve_forever)
-    t.setDaemon = True
-    t.start()
+    p = pcapy.open_live("eth0", 1500, False, 0)
+    p.setfilter("udp and port 54321")
+    p.loop(-1, pkt_cb)
+
+    #us = UDPServer(("10.0.130.255", 54321), SampleHandler)
+    #us = UDPServer(("10.0.130.255", 54321), SampleHandler)
+    #us.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    #t = threading.Thread(target=us.serve_forever)
+    #t.setDaemon = True
+    #t.start()
 
     BaseHTTPServer.allow_reuse_address = True
     SocketServer.TCPServer.address_family = socket.AF_INET6
