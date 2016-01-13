@@ -16,7 +16,7 @@
 #include <EtherCard.h>
 
 #ifdef VERBOSE
-#define VLOG(x) Serial.print(x)
+#define VLOG(x) Serial.println(x)
 #else
 #define VLOG(x)
 #endif
@@ -32,12 +32,13 @@ byte mymac[] = {
 byte Ethernet::buffer[BUF_SIZE];
 
 #define CS_PIN 8
+#define ERR_PIN 13
 
 int res = 0;
 void initialize_ethernet(void){  
   for(;;){ // keep trying until you succeed 
     //Reinitialize ethernet module
-    VLOG("Resetting Ethernet")
+    VLOG("Resetting Ethernet");
     pinMode(CS_PIN, OUTPUT);
     digitalWrite(CS_PIN, LOW);
     delay(1000);
@@ -46,12 +47,26 @@ void initialize_ethernet(void){
 
     if (ether.begin(sizeof Ethernet::buffer, mymac, CS_PIN) == 0){ 
       VLOG( "Failed to access Ethernet controller");
+      digitalWrite(ERR_PIN, HIGH);
+      delay(1000);
+      digitalWrite(ERR_PIN, LOW);
+      delay(300);
+      digitalWrite(ERR_PIN, HIGH);
+      delay(1000);
+      digitalWrite(ERR_PIN, LOW);
+
       continue;
     }
 
-    Serial.println("DHCP");
     if (!ether.dhcpSetup("powerhaus0", true)){
       VLOG("DHCP failed");
+      digitalWrite(ERR_PIN, HIGH);
+      delay(300);
+      digitalWrite(ERR_PIN, LOW);
+      delay(300);
+      digitalWrite(ERR_PIN, HIGH);
+      delay(300);
+      digitalWrite(ERR_PIN, LOW);
       continue;
     }
 #ifdef VERBOSE
@@ -70,11 +85,13 @@ void setup(void)
 {
   // serial is used to speak to auxillary atmega88, which sets its pin
   // when data is available.
+  pinMode(ERR_PIN, OUTPUT);
+  digitalWrite(ERR_PIN, HIGH);
   Serial.begin(19200);
   Serial.setTimeout(500);
   delay(1000);
-
   initialize_ethernet();
+  digitalWrite(ERR_PIN, LOW);
 }
 
 static float count_pulses(int pin, int secs)
