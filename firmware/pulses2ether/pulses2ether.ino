@@ -179,8 +179,8 @@ void loop(void)
   len += interrogate_aux(buf + len, BUF_SIZE - len);
   udpbcast((byte*)buf, len, 12345, 54321);
 
-  /* These function calls are required if ICMP packets are to be accepted */
-  //rc = ether.packetLoop(ether.packetReceive()); // today we do not accept nuthin
+  // ICMP, DHCP renew, etc.
+  rc = ether.packetLoop(ether.packetReceive());
 
   return;
 }
