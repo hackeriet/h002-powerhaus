@@ -35,38 +35,33 @@ byte Ethernet::buffer[BUF_SIZE];
 #define ERR_PIN 13
 
 int res = 0;
+
+void error_blink(int times)
+{
+  int period = 3000;
+  for(int i = 0; i < times; i ++) { 
+      digitalWrite(ERR_PIN, HIGH);
+      delay(period/times/2);
+      digitalWrite(ERR_PIN, LOW);
+      delay(period/times/2);
+  }
+}
 void initialize_ethernet(void){  
   for(;;){ // keep trying until you succeed 
     //Reinitialize ethernet module
     VLOG("Resetting Ethernet");
     pinMode(CS_PIN, OUTPUT);
-    digitalWrite(CS_PIN, LOW);
-    delay(1000);
-    digitalWrite(CS_PIN, HIGH);
-    delay(500);
+    error_blink(2);
 
     if (ether.begin(sizeof Ethernet::buffer, mymac, CS_PIN) == 0){ 
       VLOG( "Failed to access Ethernet controller");
-      digitalWrite(ERR_PIN, HIGH);
-      delay(1000);
-      digitalWrite(ERR_PIN, LOW);
-      delay(300);
-      digitalWrite(ERR_PIN, HIGH);
-      delay(1000);
-      digitalWrite(ERR_PIN, LOW);
-
+      error_blink(3);
       continue;
     }
 
-    if (!ether.dhcpSetup("powerhaus0", true)){
+    if (!ether.dhcpSetup(NAME, true)){
       VLOG("DHCP failed");
-      digitalWrite(ERR_PIN, HIGH);
-      delay(300);
-      digitalWrite(ERR_PIN, LOW);
-      delay(300);
-      digitalWrite(ERR_PIN, HIGH);
-      delay(300);
-      digitalWrite(ERR_PIN, LOW);
+      error_blink(6);
       continue;
     }
 #ifdef VERBOSE
