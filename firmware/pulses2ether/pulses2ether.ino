@@ -1,4 +1,5 @@
 /* PowerHaus - comotion@hackeriet.no - 2015-02-13
+ *  Added LLDP 2016-01-19
  *
  * Code reads power consumption through pulse counting each of 6 LDRs
  * as well as communicating serially with auxillary chip, and sends the
@@ -15,6 +16,10 @@
 
 #include <EtherCard.h>
 
+#define VERSION "2016-01-19"
+#define NAME "powerhaus0"
+#define HOST NAME".hackeriet.no"
+#define DESCRIPTION "POWERHAUS kakesmurf zool, Pulse counting and CT power monitor, v"VERSION;
 #ifdef VERBOSE
 #define VLOG(x) Serial.println(x)
 #else
@@ -22,7 +27,7 @@
 #endif
 
 #define BUF_SIZE 512
-#define HEADER "powerhaus0.kakesmurf.zool pulses/min:"
+#define HEADER HOST" pulses/min:"
 #define AUX_HEAD " CTpower: "
 #define SAMPLE_DELAY 5 // total sample time = 2s
 
@@ -159,6 +164,51 @@ int interrogate_aux(char *buf, int maxlen)
   return len;
 }
 
+void sendLLDP(void)
+{
+  byte *p = ENC28J60::buffer;
+  char lldpmac[] = { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x00 };
+  int16_t ethertype = 0x88cc;    // TLs are 7 bit type, 9 bit len
+  int16_t chassisTL = 0x0207;    // type 1, len 7
+  int16_t portTL = 0x0407;       // type 2, len 7
+  int32_t  ttlTLV = 0x06020078;  // type 3, len 2, 120s
+  int16_t portdescTL = 0x0809;   // type 4, len 9
+  char portdesc[] = NAME;
+  int16_t sysnameTL = 0x0a13;    // type 10, len 19
+  char sysname[] = HOST;
+  char sysdesc[] = DESCRIPTION;
+  // multicast ends with 0e ? bcast 03?
+  memcpy(p, lldpmac, sizeof(lldpmac));
+  p += sizeof(lldpmac);
+  memcpy(p, mymac, sizeof(mymac));
+  p += sizeof(mymac);
+  memcpy(p, &ethertype, sizeof(ethertype));
+  p += sizeof(ethertype);
+  memcpy(p, &chassisTL, sizeof(chassisTL));
+  p += sizeof(chassisTL);
+  *p++ = 0x05; //chassis id subtype networkAddress
+  memcpy(p, EtherCard::myip, 4);
+  p += 4;
+  memcpy(p, &portTL, sizeof(portTL));
+  *p++ = 0x03; //port id subtype MAC address
+  memcpy(p, mymac, sizeof(mymac));
+  p += sizeof(mymac);
+  memcpy(p, &ttlTLV, sizeof(ttlTLV));
+  p += sizeof(ttlTLV);
+  memcpy(p, &portdescTL, sizeof(portdescTL));
+  p += sizeof(portdescTL);
+  memcpy(p, portdesc, sizeof(portdesc));
+  p += sizeof(portdesc);
+  memcpy(p, &sysnameTL, sizeof(sysnameTL));
+  p += sizeof(sysnameTL);
+  memcpy(p, sysname, sizeof(sysname));
+  p += sizeof(sysname);
+  memcpy(p, sysdesc, sizeof(sysdesc));
+  p += sizeof(sysdesc);
+  *p++ = 0x00; *p++ = 0x00; // end of LLDPDU
+  ether.packetSend(p - ENC28J60::buffer);
+}
+
 void loop(void)
 {
   word rc;
@@ -176,6 +226,7 @@ void loop(void)
 
   // ICMP, DHCP renew, etc.
   rc = ether.packetLoop(ether.packetReceive());
+  sendLLDP();
 
   return;
 }
