@@ -15,7 +15,8 @@
  */
 
 #include <EtherCard.h>
-
+#undef VERBOSE
+#undef LLDP
 #define VERSION "2016-01-19"
 #define NAME "powerhaus0"
 #define HOST NAME".hackeriet.no"
@@ -164,9 +165,12 @@ int interrogate_aux(char *buf, int maxlen)
   return len;
 }
 
+
+#ifdef LLDP
 void sendLLDP(void)
 {
-  byte *p = ENC28J60::buffer;
+  Serial.println("sending LLDP");
+  byte *p = ether.buffer;
   char lldpmac[] = { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x00 };
   int16_t ethertype = 0x88cc;    // TLs are 7 bit type, 9 bit len
   int16_t chassisTL = 0x0207;    // type 1, len 7
@@ -206,9 +210,10 @@ void sendLLDP(void)
   memcpy(p, sysdesc, sizeof(sysdesc));
   p += sizeof(sysdesc);
   *p++ = 0x00; *p++ = 0x00; // end of LLDPDU
-  ether.packetSend(p - ENC28J60::buffer);
+  EtherCard::packetSend(p - ether.buffer);
 }
 
+#endif
 void loop(void)
 {
   word rc;
@@ -226,8 +231,9 @@ void loop(void)
 
   // ICMP, DHCP renew, etc.
   rc = ether.packetLoop(ether.packetReceive());
+  #ifdef LLDP
   sendLLDP();
-
+#endif
   return;
 }
 
