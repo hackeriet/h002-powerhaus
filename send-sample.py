@@ -17,7 +17,6 @@ def vary(msg):
         if type(item) == float:
             _ = random.random() * item
             newmsg[i] = "%.3f" % _
-    print newmsg
     return newmsg
 
 # ticks/minute == LDR blinks, CTpower == current sensors.
