@@ -1,0 +1,14 @@
+# Template systemd service file for the powerhaus daemon.
+
+[Unit]
+Description=powerhaus daemon
+After=network.target
+
+[Service]
+RestartOnFailure=yes
+ExecStart=powerdaemon.py
+User=nobody
+Group=nogroup
+
+[Install]
+WantedBy=multi-user.target

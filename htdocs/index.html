@@ -5,9 +5,9 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>powerhaus</title>
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap-theme.min.css">
-  <script src="http://mbostock.github.com/d3/d3.v2.js"></script>
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.css">
+<!--  <link rel="stylesheet" href="/bootstrap-theme.min.css"> -->
+  <script src="d3.js"></script>
   <style>
       /* tell the SVG path to be a thin blue line without any area fill */
       path {
@@ -54,12 +54,12 @@
         return y(d); 
       })
       .interpolate(interpolation)
- 
+
       // display the line by appending an svg:path element with the data line we created above
       graph.append("svg:path").attr("d", line(data));
       // or it can be done like this
       //graph.selectAll("path").data([data]).enter().append("svg:path").attr("d", line);
-      
+
       function redrawWithAnimation() {
         // update with animation
         graph.selectAll("path")
@@ -70,19 +70,19 @@
           .ease("linear")
           .duration(transitionDelay) // for this demo we want a continual slide so set this to the same as the setInterval amount below
           .attr("transform", "translate(" + x(0) + ")"); // animate a slide to the left back to x(0) pixels to reveal the new value
-          
+
           /* thanks to 'barrym' for examples of transform: https://gist.github.com/1137131 */
       }
-      
+
       function redrawWithoutAnimation() {
         // static update without animation
         graph.selectAll("path")
           .data([data]) // set the new data
           .attr("d", line); // apply the new data values
       }
-      
+
       setInterval(function() {
-         $.getJSON("http://blade:8088/readings.json", function(d) {
+         $.getJSON("/readings.json", function(d) {
           data.shift();
           data.push(d["p0"][0]);
           console.log(d["p0"][0]);
@@ -93,21 +93,19 @@
        redrawWithoutAnimation();
       }, updateDelay);
     }
-    
+
     displayGraphExample("#graph1", 500, 40, "basis", true, 1000, 1000);
     displayGraphExample("#graph2", 500, 40, "basis", true, 1000, 1000);
     displayGraphExample("#graph3", 500, 40, "basis", true, 1000, 1000);
 /*    displayGraphExample("#graph2", 150, 15, "basis", true, 1000, 1000);
     displayGraphExample("#graph3", 150, 15, "linear", true, 1000, 1000);
-    displayGraphExample("#graph4", 150, 15, "linear", false, 1000, 1000);   
-    displayGraphExample("#graph5", 300, 30, "basis", true, 1500, 750);  
-    displayGraphExample("#graph6", 300, 30, "basis", false, 1500, 750);   
+    displayGraphExample("#graph4", 150, 15, "linear", false, 1000, 1000);
+    displayGraphExample("#graph5", 300, 30, "basis", true, 1500, 750);
+    displayGraphExample("#graph6", 300, 30, "basis", false, 1500, 750);
     */
   </script>
   </div>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+  <script src="/jquery-2.0.3.min.js"></script>
+  <script src="/bootstrap/js/bootstrap.js"></script>
   </body>
 </html>
-
-
