@@ -48,7 +48,7 @@ class SampleHandler(DatagramRequestHandler):
             if len(readings[k]) == 3:
                 readings[k].pop(0)
             readings[k] += [v]
-        #logging.debug("state: %s" % pformat(readings))
+        logging.debug("state: %s" % pformat(readings))
 
 class HTTPRequestHandler(SimpleHTTPRequestHandler):
     #def log_message(self, *args, **kwargs):
