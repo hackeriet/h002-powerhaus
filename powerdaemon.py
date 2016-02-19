@@ -11,28 +11,25 @@ Author: Lasse Karstensen <lasse.karstensen@gmail.com>, February 2015.
 
 import sys
 import os
-import datetime
 import json
 import logging
-import random
 import socket
-import pcapy
-#import multiprocessing
-from multiprocessing import Process
+from time import time, sleep
+from threading import Thread
 from datetime import datetime
 from pprint import pprint, pformat
 from os.path import join, dirname, realpath, basename
 import BaseHTTPServer
 import SocketServer
 from SimpleHTTPServer import SimpleHTTPRequestHandler
+import pcapy
 
 import powerhaus
 
-# { "sensorid": [ 1.1, 1.2, 0.9, 1.1 ], }
+global readings, shutdown
 readings = {}
+shutdown = False
 
-# https://docs.python.org/2/library/multiprocessing.html -> Shared Memory
-#    arr = Array('i', range(10))
 
 class HTTPRequestHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -92,62 +89,89 @@ class ThreadedHTTPServer(SocketServer.ThreadingMixIn,
 def PcapRunner(interface="eno1"):
     p = pcapy.open_live(interface, 1500, True, 0)
     p.setfilter("udp and port 54321")
-    if True:
-        os.setgid(65534)
-        os.setgroups([])
-        os.setuid(65534)
-    print "Done initing .."
-    p.loop(-1, pkt_cb)
-    print "mjoff .. "
+
+    # Drop privileges now that we're done binding.
+    os.setgid(65534)
+    os.setgroups([])
+    os.setuid(65534)
+
+    while shutdown is False:
+        p.dispatch(0, pkt_cb)
 
 def pkt_cb(pkthdr, data):
     assert os.geteuid() != 0
+    global readings
 
     # best check ever.
     if "powerhaus0.hackeriet.no" not in data:
         return
 
-    outputfp = sys.stdout
     ts = datetime.fromtimestamp(pkthdr.getts()[0])
+
     try:
         sample = powerhaus.parse_packet(data[42:])
-        #print " ".join(["%s=%.3f" % (x[0], x[1]) for x in sample])
-        outputfp.write("%s\t" % ts)
-        outputfp.write("\t".join(["%.2f" % (x[1]) for x in sample]) + "\n")
     except AttributeError:
-        outputfp.write("%s\t" % ts)
-        outputfp.write("INVALID packet data: %s\n" % pformat(sample))
+        logging.debug("INVALID packet data: %s\n" % pformat(sample))
+        return
 
-    for k, v in sample[1:]:
-        if not k in readings:
-            readings[k] = [v]
-            return
-
-        if len(readings[k]) == 3:
+    for k, v in sample:
+        if k not in readings:
+            readings[k] = []
+        readings[k].append(v)
+        if len(readings[k]) == 15:
             readings[k].pop(0)
-        readings[k] += [v]
-    logging.debug("state: %s" % pformat(readings))
+    #logging.debug("state: %s" % pformat(readings))
 
+def FileSnapshot(outputfile="/var/tmp/powerhaus.json"):
+    assert os.geteuid() != 0
+    global readings
+
+    last_write = 0.0
+    while shutdown is False:
+        if last_write < time() - 60:
+            last_write = time()
+            # blatantly ignoring the possiblity of overwriting something ..
+            with open(outputfile, "w+") as fp:
+                fp.write(json.dumps(readings, indent=2))
+        sleep(0.2)
+
+def WebServer(port=8088):
+    assert os.geteuid() != 0
+    global readings, shutdown
+
+    BaseHTTPServer.allow_reuse_address = True
+    SocketServer.TCPServer.address_family = socket.AF_INET6
+    SocketServer.TCPServer.allow_reuse_address = True
+    hp = ThreadedHTTPServer(("127.0.0.1", port), HTTPRequestHandler)
+
+    while shutdown is False:
+        # This blocks until the next request comes along ...
+        hp.handle_request()
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     if os.geteuid() != 0:
-        logging.error("Need to be root to run pcap")
+        logging.error("Need to be root to run this program. (pcap)")
         exit(1)
 
-    source = Process(target=PcapRunner, args=[])
+    logging.info("Starting up..")
+    source = Thread(target=PcapRunner, args=[])
     source.start()
+    filewriter = Thread(target=FileSnapshot, args=[])
+    filewriter.start()
+    httpserver = Thread(target=WebServer, args=[])
+    httpserver.start()
 
-    if 1:
-        BaseHTTPServer.allow_reuse_address = True
-        SocketServer.TCPServer.address_family = socket.AF_INET6
-        SocketServer.TCPServer.allow_reuse_address = True
-        hp = ThreadedHTTPServer(("", 8088), HTTPRequestHandler)
-
+    while shutdown is False:
         try:
-            hp.serve_forever()
+            sleep(0.2)
         except KeyboardInterrupt:
-            pass
+            shutdown = True
+            break
 
-    print "waiting for pcap .."
+    logging.debug("Shutting down..")
+    filewriter.join()
     source.join()
+    httpserver.join()
+
+    logging.info("Normal exit")
