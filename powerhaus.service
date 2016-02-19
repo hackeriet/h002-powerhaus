@@ -7,8 +7,7 @@ After=network.target
 [Service]
 RestartOnFailure=yes
 ExecStart=powerdaemon.py
-User=nobody
-Group=nogroup
+User=root
 
 [Install]
 WantedBy=multi-user.target

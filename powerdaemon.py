@@ -33,9 +33,12 @@ shutdown = False
 
 class HTTPRequestHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
+        if self.path.startswith("/powerhaus"):
+            self.path = self.path[len("/powerhaus")-1:]
+
         if (self.path == "/"):
-            self.path = "/index.html"
-        elif (self.path == "/readings.json"):
+            self.path = "index.html"
+        elif (self.path == "readings.json"):
             body = json.dumps(readings, indent=2)
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -122,17 +125,18 @@ def pkt_cb(pkthdr, data):
             readings[k].pop(0)
     #logging.debug("state: %s" % pformat(readings))
 
-def FileSnapshot(outputfile="/var/tmp/powerhaus.json"):
+def FileSnapshot(outputfile="/var/tmp/powerhaus.munin.txt"):
     assert os.geteuid() != 0
     global readings
 
     last_write = 0.0
     while shutdown is False:
-        if last_write < time() - 60:
+        if last_write < time() - 5:
             last_write = time()
             # blatantly ignoring the possiblity of overwriting something ..
             with open(outputfile, "w+") as fp:
-                fp.write(json.dumps(readings, indent=2))
+                for k, v in readings.items():
+                    fp.write("%s.value %.2f\n" % (k, v[0]))
         sleep(0.2)
 
 def WebServer(port=8088):
