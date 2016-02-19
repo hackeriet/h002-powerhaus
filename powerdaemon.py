@@ -8,52 +8,33 @@ Used for graphing power usage.
 
 Author: Lasse Karstensen <lasse.karstensen@gmail.com>, February 2015.
 """
+
+import sys
+import os
 import datetime
 import json
 import logging
 import random
 import socket
-import threading
-
+import pcapy
+#import multiprocessing
+from multiprocessing import Process
+from datetime import datetime
+from pprint import pprint, pformat
+from os.path import join, dirname, realpath, basename
 import BaseHTTPServer
 import SocketServer
-
-from SocketServer import UDPServer, DatagramRequestHandler
 from SimpleHTTPServer import SimpleHTTPRequestHandler
-from pprint import pprint, pformat
-from sys import argv
-from os import stat
-from os.path import join, dirname, realpath, basename
 
 import powerhaus
 
 # { "sensorid": [ 1.1, 1.2, 0.9, 1.1 ], }
 readings = {}
 
-class SampleHandler(DatagramRequestHandler):
-    def handle(self):
-        global readings
-        payload = self.rfile.read()
-        try:
-            sample = powerhaus.parse_packet(payload)
-        except powerhaus.ParseError as e:
-            logging.debug("Invalid packet received. Error: %s" % str(e))
-            return
-
-        for k, v in sample[1:]:
-            if not k in readings:
-                readings[k] = [v]
-                return
-
-            if len(readings[k]) == 3:
-                readings[k].pop(0)
-            readings[k] += [v]
-        logging.debug("state: %s" % pformat(readings))
+# https://docs.python.org/2/library/multiprocessing.html -> Shared Memory
+#    arr = Array('i', range(10))
 
 class HTTPRequestHandler(SimpleHTTPRequestHandler):
-    #def log_message(self, *args, **kwargs):
-    #    pass
-
     def do_GET(self):
         if (self.path == "/"):
             self.path = "/index.html"
@@ -107,18 +88,66 @@ class ThreadedHTTPServer(SocketServer.ThreadingMixIn,
             import traceback
             traceback.print_exc()
 
+
+def PcapRunner(interface="eno1"):
+    p = pcapy.open_live(interface, 1500, True, 0)
+    p.setfilter("udp and port 54321")
+    if True:
+        os.setgid(65534)
+        os.setgroups([])
+        os.setuid(65534)
+    print "Done initing .."
+    p.loop(-1, pkt_cb)
+    print "mjoff .. "
+
+def pkt_cb(pkthdr, data):
+    assert os.geteuid() != 0
+
+    # best check ever.
+    if "powerhaus0.hackeriet.no" not in data:
+        return
+
+    outputfp = sys.stdout
+    ts = datetime.fromtimestamp(pkthdr.getts()[0])
+    try:
+        sample = powerhaus.parse_packet(data[42:])
+        #print " ".join(["%s=%.3f" % (x[0], x[1]) for x in sample])
+        outputfp.write("%s\t" % ts)
+        outputfp.write("\t".join(["%.2f" % (x[1]) for x in sample]) + "\n")
+    except AttributeError:
+        outputfp.write("%s\t" % ts)
+        outputfp.write("INVALID packet data: %s\n" % pformat(sample))
+
+    for k, v in sample[1:]:
+        if not k in readings:
+            readings[k] = [v]
+            return
+
+        if len(readings[k]) == 3:
+            readings[k].pop(0)
+        readings[k] += [v]
+    logging.debug("state: %s" % pformat(readings))
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
+    if os.geteuid() != 0:
+        logging.error("Need to be root to run pcap")
+        exit(1)
 
-    us = UDPServer(("", 54321), SampleHandler)
-    t = threading.Thread(target=us.serve_forever)
-    t.setDaemon = True
-    t.start()
+    source = Process(target=PcapRunner, args=[])
+    source.start()
 
-    BaseHTTPServer.allow_reuse_address = True
-    SocketServer.TCPServer.address_family = socket.AF_INET6
-    SocketServer.TCPServer.allow_reuse_address = True
+    if 1:
+        BaseHTTPServer.allow_reuse_address = True
+        SocketServer.TCPServer.address_family = socket.AF_INET6
+        SocketServer.TCPServer.allow_reuse_address = True
+        hp = ThreadedHTTPServer(("", 8088), HTTPRequestHandler)
 
-    httpport = argv[1] if len(argv) > 1 else 8088
-    hp = ThreadedHTTPServer(("", httpport), HTTPRequestHandler)
-    hp.serve_forever()
+        try:
+            hp.serve_forever()
+        except KeyboardInterrupt:
+            pass
+
+    print "waiting for pcap .."
+    source.join()
